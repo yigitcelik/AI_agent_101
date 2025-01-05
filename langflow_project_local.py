@@ -1,6 +1,3 @@
-# Note: Replace **<YOUR_APPLICATION_TOKEN>** with your actual Application token
-import os
-from dotenv import load_dotenv
 import argparse
 import json
 from argparse import RawTextHelpFormatter
@@ -13,24 +10,21 @@ except ImportError:
     warnings.warn("Langflow provides a function to help you upload files to the flow. Please install langflow to use it.")
     upload_file = None
 
-load_dotenv()
-
-BASE_API_URL = "https://api.langflow.astra.datastax.com"
-LANGFLOW_ID = "f5d4092f-7689-4291-bce0-7845a1bf86c3"
-FLOW_ID = "767e9886-e0d6-40dd-af23-4c27df8c4a35"
-APPLICATION_TOKEN = os.getenv("LANGFLOW_APPLICATION_TOKEN")
+BASE_API_URL = "http://127.0.0.1:7860"
+FLOW_ID = "43efb400-07c6-4f01-9fa7-84282aefa43c"
 ENDPOINT = "macros" # The endpoint name of the flow
 
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
 TWEAKS = {
-  "TextInput-I9gwe": {},
-  "TextInput-buTgA": {},
-  "Prompt-Xv87n": {},
-  "GroqModel-1C7Uf": {},
-  "TextOutput-us0sI": {},
-  "ChatInput-E5Pox": {},
-  "ChatOutput-35MP9": {}
+  "TextInput-VUs9M": {},
+  "TextInput-JYqAv": {},
+  "Prompt-nz4fE": {},
+  "GroqModel-7Sage": {},
+  "TextOutput-9ShcS": {},
+  "ChatInput-qFSOA": {},
+  "ChatOutput-4oDh0": {},
+  "OllamaModel-cm9bb": {}
 }
 
 def run_flow(message: str,
@@ -38,7 +32,7 @@ def run_flow(message: str,
   output_type: str = "chat",
   input_type: str = "chat",
   tweaks: Optional[dict] = None,
-  application_token: Optional[str] = None) -> dict:
+  api_key: Optional[str] = None) -> dict:
     """
     Run a flow with a given message and optional tweaks.
 
@@ -47,7 +41,7 @@ def run_flow(message: str,
     :param tweaks: Optional tweaks to customize the flow
     :return: The JSON response from the flow
     """
-    api_url = f"{BASE_API_URL}/lf/{LANGFLOW_ID}/api/v1/run/{endpoint}"
+    api_url = f"{BASE_API_URL}/api/v1/run/{endpoint}"
 
     payload = {
         "input_value": message,
@@ -57,8 +51,8 @@ def run_flow(message: str,
     headers = None
     if tweaks:
         payload["tweaks"] = tweaks
-    if application_token:
-        headers = {"Authorization": "Bearer " + application_token, "Content-Type": "application/json"}
+    if api_key:
+        headers = {"x-api-key": api_key}
     response = requests.post(api_url, json=payload, headers=headers)
     return response.json()
 
@@ -69,7 +63,7 @@ Run it like: python <your file>.py "your message here" --endpoint "your_endpoint
     parser.add_argument("message", type=str, help="The message to send to the flow")
     parser.add_argument("--endpoint", type=str, default=ENDPOINT or FLOW_ID, help="The ID or the endpoint name of the flow")
     parser.add_argument("--tweaks", type=str, help="JSON string representing the tweaks to customize the flow", default=json.dumps(TWEAKS))
-    parser.add_argument("--application_token", type=str, default=APPLICATION_TOKEN, help="Application Token for authentication")
+    parser.add_argument("--api_key", type=str, help="API key for authentication", default=None)
     parser.add_argument("--output_type", type=str, default="chat", help="The output type")
     parser.add_argument("--input_type", type=str, default="chat", help="The input type")
     parser.add_argument("--upload_file", type=str, help="Path to the file to upload", default=None)
@@ -86,7 +80,7 @@ Run it like: python <your file>.py "your message here" --endpoint "your_endpoint
             raise ImportError("Langflow is not installed. Please install it to use the upload_file function.")
         elif not args.components:
             raise ValueError("You need to provide the components to upload the file to.")
-        tweaks = upload_file(file_path=args.upload_file, host=BASE_API_URL, flow_id=ENDPOINT, components=args.components, tweaks=tweaks)
+        tweaks = upload_file(file_path=args.upload_file, host=BASE_API_URL, flow_id=args.endpoint, components=[args.components], tweaks=tweaks)
 
     response = run_flow(
         message=args.message,
@@ -94,7 +88,7 @@ Run it like: python <your file>.py "your message here" --endpoint "your_endpoint
         output_type=args.output_type,
         input_type=args.input_type,
         tweaks=tweaks,
-        application_token=args.application_token
+        api_key=args.api_key
     )
 
     print(json.dumps(response, indent=2))
